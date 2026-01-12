@@ -3,28 +3,39 @@ import os
 import sys
 import subprocess
 import platform
-import time
+import socket
+import hashlib
+from Crypto.Cipher import AES
+from Crypto.Random import get_random_bytes
 
 REPO_DIR = "repos"
+CURRENT_REPO = None
+
+DED_CAT_REPO = "https://github.com/DedcatOff/dedcat.git"
 
 AUTO_REPOS = [
-    # SEM SI BUDEŠ PŘIDÁVAT DALŠÍ REPOS
     "https://github.com/palahsu/DDoS-Ripper.git",
 ]
 
+LAN_PORT = 50505
+BUF = 4096
+
 LOGO = r"""
- ________  _______   ________  ________  ________  _________   
-|\   ___ \|\  ___ \ |\   ___ \|\   ____\|\   __  \|\___   ___\ 
-\ \  \_|\ \ \   __/|\ \  \_|\ \ \  \___|\ \  \|\  \|___ \  \_| 
- \ \  \ \\ \ \  \_|/_\ \  \ \\ \ \  \    \ \   __  \   \ \  \  
-  \ \  \_\\ \ \  \_|\ \ \  \_\\ \ \  \____\ \  \ \  \   \ \  \ 
+ ________  _______   ________  ________  ________  _________
+|\   ___ \|\  ___ \ |\   ___ \|\   ____\|\   __  \|\___   ___\
+\ \  \_|\ \ \   __/|\ \  \_|\ \ \  \___|\ \  \|\  \|___ \  \_|
+ \ \  \ \\ \ \  \_|/_\ \  \ \\ \ \  \    \ \   __  \   \ \  \
+  \ \  \_\\ \ \  \_|\ \ \  \_\\ \ \  \____\ \  \ \  \   \ \  \
    \ \_______\ \_______\ \_______\ \_______\ \__\ \__\   \ \__\
     \|_______|\|_______|\|_______|\|_______|\|__|\|__|    \|__|
                         free the world !
 """
 
-def blue(t): return f"\033[94m{t}\033[0m"
-def clear(): os.system("clear")
+def blue(t): 
+    return f"\033[94m{t}\033[0m"
+
+def clear(): 
+    os.system("clear")
 
 def is_termux():
     return os.path.exists("/data/data/com.termux")
@@ -107,7 +118,9 @@ def select_repo():
 def shell_mode():
     print("\n[SHELL MODE] napiš 'exit' pro návrat\n")
     cwd = f"{REPO_DIR}/{CURRENT_REPO}" if CURRENT_REPO else None
-    os.execvp("bash", ["bash"] if not cwd else ["bash", "-i"])
+    if cwd:
+        os.chdir(cwd)
+    os.execvp("bash", ["bash"])
 
 def pad(data):
     l = 16 - len(data) % 16
@@ -120,7 +133,6 @@ def key_from_pass(p):
     return hashlib.sha256(p.encode()).digest()
 
 def lan_receive():
-    name = input("Session: ")
     passwd = input("Heslo: ")
     key = key_from_pass(passwd)
 
@@ -133,8 +145,8 @@ def lan_receive():
     iv = c.recv(16)
     cipher = AES.new(key, AES.MODE_CBC, iv)
 
-    fname = c.recv(256).decode()
-    size = int(c.recv(64).decode())
+    fname = c.recv(256).decode().strip()
+    size = int(c.recv(64).decode().strip())
     data = b""
 
     while len(data) < size:
@@ -170,8 +182,10 @@ def lan_send():
 def lan_menu():
     print("[1] Příjem\n[2] Odeslání")
     c = input("> ")
-    if c == "1": lan_receive()
-    if c == "2": lan_send()
+    if c == "1":
+        lan_receive()
+    elif c == "2":
+        lan_send()
 
 def main():
     if not is_termux() and os.geteuid() != 0:
@@ -188,11 +202,16 @@ def main():
         menu()
         c = input("> ")
 
-        if c == "1": list_repos()
-        elif c == "2": select_repo()
-        elif c == "3": shell_mode()
-        elif c == "4": lan_menu()
-        elif c == "0": break
+        if c == "1":
+            list_repos()
+        elif c == "2":
+            select_repo()
+        elif c == "3":
+            shell_mode()
+        elif c == "4":
+            lan_menu()
+        elif c == "0":
+            break
 
         pause()
 
