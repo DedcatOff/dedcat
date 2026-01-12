@@ -2,20 +2,26 @@
 import os
 import sys
 import subprocess
+import socket
+import threading
+import time
+import platform
 
-# ================== KONFIGURACE ==================
+# ================== KONFIG ==================
 
 REPO_DIR = "repos"
-INSTALL_FLAG = ".dedcat_installed"
 CURRENT_REPO = None
-SHELL_MODE = False
+
+DISCOVERY_PORT = 45454
+TRANSFER_PORT = 45455
+BUFFER = 4096
 
 AUTO_REPOS = [
-    "https://github.com/R3DHULK/wifi-hacking.git",
-    "https://github.com/aircrack-ng/aircrack-ng",
     "https://github.com/htr-tech/zphisher.git",
     "https://github.com/RetroXploit/DDoS-Ripper.git",
 ]
+
+DEDCAT_GIT = "https://github.com/DedcatOff/dedcat"
 
 # ================== LOGO ==================
 
@@ -43,187 +49,197 @@ LOGO = r"""
 
 # ================== UTIL ==================
 
-def color(t, c): return f"\033[{c}m{t}\033[0m"
+def c(t, col): return f"\033[{col}m{t}\033[0m"
 def clear(): os.system("clear")
-def pause(): input(color("\n[ENTER] pokračuj...", "90"))
+def run(cmd, cwd=None): subprocess.run(cmd, shell=True, cwd=cwd)
 
-def run(cmd, cwd=None):
-    subprocess.run(cmd, shell=True, cwd=cwd)
+# ================== UPDATE ==================
 
-def require_sudo():
-    if os.geteuid() != 0:
-        print(color("Spusť Dedcat pomocí sudo!", "31"))
-        sys.exit(1)
+def system_update():
+    if "termux" in platform.platform().lower():
+        run("pkg update -y && pkg upgrade -y")
+    else:
+        run("apt update -y && apt upgrade -y")
+
+def dedcat_self_update():
+    if os.path.isdir(".git"):
+        print(c("[DED CAT] checking updates...", "33"))
+        run("git pull")
+    else:
+        print(c("[DED CAT] not installed via git", "90"))
 
 # ================== UI ==================
 
-def show_logo():
+def show():
     clear()
-    print(color(LOGO, "36"))
-    print(color(
-        f"Aktivní repo: {CURRENT_REPO if CURRENT_REPO else 'žádné'} | Shell mód: {'ON' if SHELL_MODE else 'OFF'}\n",
-        "35"
-    ))
+    print(c(LOGO, "36"))
+    print(c(f"Aktivní repo: {CURRENT_REPO if CURRENT_REPO else 'žádné'}\n", "35"))
 
 def menu():
-    print(color("""
+    print(c("""
 [1] Vypsat repozitáře
-[2] Přidat repo RUČNĚ (clone)
-[3] Aktualizovat repozitář
-[4] Aktualizovat VŠECHNY repozitáře
-[5] Vybrat aktivní repo
-[6] Smazat repozitář
-[7] System update & upgrade
-[8] Shell mód (bash)
+[2] Přidat repo
+[5] Vybrat repo
+[8] Shell mód
+[9] LAN file transfer
 [0] Konec
 """, "36"))
 
 # ================== REPOS ==================
 
-def ensure_repo_dir():
+def ensure_repos():
     os.makedirs(REPO_DIR, exist_ok=True)
 
-def repo_name_from_url(url):
-    return url.split("/")[-1].replace(".git", "")
-
-def auto_clone_and_update():
-    ensure_repo_dir()
+def auto_clone():
+    ensure_repos()
     for url in AUTO_REPOS:
-        name = repo_name_from_url(url)
+        name = url.split("/")[-1].replace(".git", "")
         path = f"{REPO_DIR}/{name}"
-
         if not os.path.isdir(path):
-            print(color(f"[CLONE] {name}", "33"))
             run(f"git clone {url}", cwd=REPO_DIR)
         else:
-            print(color(f"[UPDATE] {name}", "34"))
             run("git pull", cwd=path)
 
 def list_repos():
-    ensure_repo_dir()
-    repos = os.listdir(REPO_DIR)
-    if not repos:
-        print(color("Žádné repozitáře.", "90"))
-    for r in repos:
-        print(color(f"- {r}", "32"))
-
-def clone_repo_manual():
-    ensure_repo_dir()
-    url = input(color("GitHub URL: ", "36"))
-    run(f"git clone {url}", cwd=REPO_DIR)
-
-def update_repo():
-    list_repos()
-    repo = input(color("Repo název: ", "36"))
-    path = f"{REPO_DIR}/{repo}"
-    if os.path.isdir(path):
-        run("git pull", cwd=path)
-    else:
-        print(color("Repo neexistuje!", "31"))
-
-def update_all_repos():
-    ensure_repo_dir()
+    ensure_repos()
     for r in os.listdir(REPO_DIR):
-        path = f"{REPO_DIR}/{r}"
-        if os.path.isdir(path):
-            print(color(f"→ {r}", "34"))
-            run("git pull", cwd=path)
+        print("-", r)
 
 def select_repo():
     global CURRENT_REPO
     list_repos()
-    repo = input(color("Repo název: ", "36"))
-    if os.path.isdir(f"{REPO_DIR}/{repo}"):
-        CURRENT_REPO = repo
-    else:
-        print(color("Repo neexistuje!", "31"))
+    r = input("Repo: ")
+    if os.path.isdir(f"{REPO_DIR}/{r}"):
+        CURRENT_REPO = r
 
-def delete_repo():
-    list_repos()
-    repo = input(color("Smazat repo: ", "31"))
-    path = f"{REPO_DIR}/{repo}"
-    if os.path.isdir(path):
-        run(f"rm -rf {path}")
+# ================== SHELL ==================
 
-# ================== SHELL MODE ==================
+def shell_mode():
+    rc = "/tmp/dedcatrc"
+    with open(rc, "w") as f:
+        f.write("shelloff(){ exit; }\n")
+    subprocess.run(
+        ["bash", "--rcfile", rc, "-i"],
+        cwd=f"{REPO_DIR}/{CURRENT_REPO}" if CURRENT_REPO else None
+    )
+    os.remove(rc)
 
-def shell_loop():
-    global SHELL_MODE
-    SHELL_MODE = True
+# ================== PROGRESS ==================
 
-    print(color("\n[SHELL MODE] napiš 'shelloff' pro návrat\n", "33"))
+def progress(done, total):
+    percent = int(done / total * 100)
+    mb_d = done / 1024 / 1024
+    mb_t = total / 1024 / 1024
+    print(f"\r[{percent:3}%] {mb_d:.2f}/{mb_t:.2f} MB", end="", flush=True)
 
-    rcfile = "/tmp/dedcat_bashrc"
+# ================== LAN ==================
 
-    with open(rcfile, "w") as f:
-        f.write("""
-shelloff() {
-    exit
-}
-""")
+def receiver():
+    name = input("Session name: ")
+    password = input("Password: ")
 
-    try:
-        if CURRENT_REPO:
-            subprocess.run(
-                ["bash", "--rcfile", rcfile, "-i"],
-                cwd=f"{REPO_DIR}/{CURRENT_REPO}"
-            )
-        else:
-            subprocess.run(
-                ["bash", "--rcfile", rcfile, "-i"]
-            )
-    finally:
-        SHELL_MODE = False
-        if os.path.exists(rcfile):
-            os.remove(rcfile)
+    def broadcast():
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        while True:
+            s.sendto(f"DEDCAT:{name}".encode(), ('<broadcast>', DISCOVERY_PORT))
+            time.sleep(2)
 
-# ================== SYSTEM ==================
+    threading.Thread(target=broadcast, daemon=True).start()
 
-def first_run():
-    return not os.path.exists(INSTALL_FLAG)
+    srv = socket.socket()
+    srv.bind(("", TRANSFER_PORT))
+    srv.listen(1)
 
-def mark_installed():
-    open(INSTALL_FLAG, "w").close()
+    print(c("[WAITING]", "32"))
+    conn, _ = srv.accept()
 
-def install_dependencies():
-    run("apt update")
-    run("apt install -y python3 git")
+    if conn.recv(1024).decode() != password:
+        conn.close()
+        return
 
-def system_update():
-    run("apt update && apt upgrade -y")
+    filename = conn.recv(1024).decode()
+    size = int(conn.recv(1024).decode())
+
+    received = 0
+    with open(filename, "wb") as f:
+        while received < size:
+            data = conn.recv(BUFFER)
+            if not data:
+                break
+            f.write(data)
+            received += len(data)
+            progress(received, size)
+
+    print("\n" + c("[RECEIVED]", "32"))
+    conn.close()
+
+def sender():
+    sessions = {}
+
+    def discover():
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.bind(("", DISCOVERY_PORT))
+        while True:
+            d, a = s.recvfrom(1024)
+            if d.startswith(b"DEDCAT:"):
+                sessions[d.decode().split(":")[1]] = a[0]
+
+    threading.Thread(target=discover, daemon=True).start()
+    time.sleep(3)
+
+    for s in sessions:
+        print("-", s)
+
+    name = input("connect: ")
+    pwd = input("pass: ")
+    path = input("upload: ")
+
+    size = os.path.getsize(path)
+    ip = sessions.get(name)
+    if not ip:
+        return
+
+    sock = socket.socket()
+    sock.connect((ip, TRANSFER_PORT))
+    sock.send(pwd.encode())
+    time.sleep(0.2)
+    sock.send(os.path.basename(path).encode())
+    time.sleep(0.2)
+    sock.send(str(size).encode())
+
+    sent = 0
+    with open(path, "rb") as f:
+        while data := f.read(BUFFER):
+            sock.send(data)
+            sent += len(data)
+            progress(sent, size)
+
+    print("\n" + c("[SENT]", "32"))
+    sock.close()
+
+def lan():
+    m = input("[1] přijímat | [2] posílat: ")
+    receiver() if m == "1" else sender()
 
 # ================== MAIN ==================
 
 def main():
-    require_sudo()
-
-    if first_run():
-        show_logo()
-        install_dependencies()
-        mark_installed()
-        pause()
-
-    auto_clone_and_update()
-    pause()
+    system_update()
+    dedcat_self_update()
+    auto_clone()
 
     while True:
-        show_logo()
+        show()
         menu()
-        cmd = input(color("dedcat> ", "32"))
+        c = input("dedcat> ")
 
-        if cmd == "1": list_repos()
-        elif cmd == "2": clone_repo_manual()
-        elif cmd == "3": update_repo()
-        elif cmd == "4": update_all_repos()
-        elif cmd == "5": select_repo()
-        elif cmd == "6": delete_repo()
-        elif cmd == "7": system_update()
-        elif cmd == "8": shell_loop()
-        elif cmd == "0": break
-        else:
-            print(color("Neplatná volba!", "31"))
-
-        pause()
+        if c == "1": list_repos()
+        elif c == "2": auto_clone()
+        elif c == "5": select_repo()
+        elif c == "8": shell_mode()
+        elif c == "9": lan()
+        elif c == "0": break
 
 if __name__ == "__main__":
     main()
