@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
-import os
-import sys
-import subprocess
-import platform
-import socket
+import os, sys, subprocess, platform, socket, time
 
 # ================= KONFIG =================
 
@@ -11,59 +7,26 @@ REPO_DIR = "repos"
 CURRENT_REPO = None
 SHELL_MODE = False
 
+DED_CAT_REPO = "https://github.com/DedcatOff/dedcat.git"
+
 AUTO_REPOS = [
     "https://github.com/RetroXploit/DDoS-Ripper.git",
 ]
 
 LAN_PORT = 50505
-BUFFER = 4096
+BUF = 4096
 
 # ================= LOGO =================
 
 LOGO = r"""
-                              ^Q,                              Q;                                   
-                              QQQQ                            QQQ                                   
-                             QQQQQ:                          QQQQQ                                  
-                             QQQQQQQ                         QQQQQQ                                 
-                            QQQQQQQQQ                       QQQQQQQQ                                
-                            QQQQ QQQQQ   QQQQQQQ+QQQQQQ~QQ QQQQQQQQQ                                
-                           QQQQQQQvQQ<QQxQQQQQQQQQQQQQQ<QQQQQ~QQQQQ<Q                               
-                           QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ                              
-                           QQ QQQQ          Q^QQ ;Q QQ          QQQQQQ                              
-                          QQQQQQ              .QQ:QQ/       !Q]   QQQYQ                             
-                         xQQQQQ      Y>QQQQ    `QQQQ QQQQ  QQQ.    QQ<QQ                            
-                         QQQQi      QQQQQQQQ)   Q+Q    -QQ'QQ      QQQQQ                            
-                           Q       Q  Q _Q Q,Q   Q'      /1 Q        QQ Q                           
-                         QQQQQ     QQ QQQQ QQx  |QQv   QQQ QQQQQ   QQQQQQ                           
-                        QQQQQQQ    QQ QQ QQQQ   QQQQ} QQQ     QQ  ^Q QQ;QQ                          
-                        QQl_Ql"x      QQzQQJ   QQQQCQQ          +  QfJQ1QQ                          
-                         QQ.QQ[QQ            QQ,Q Q_ Qt Q-  [ QQQQQQQQQQQQ                          
-                        QQQQQQQQQQQQ      QQ QQ QQ}QQQQQQQQ(    QQQ QQ <                            
-                          QQzQXQQCJ  |Q c     QQQ  QQ      QQ'QQ   t      <Q                        
-                              ;QQiQ|   .QcQQQQX  Q   QQQQQQQQQQQQQ       QQQQ   QQ                  
-                                    QQ^QQ QQlQQ.Q   :QQQQQzQQQQQ:Q{     Q+QQ{   QQQ,^"QQQQQQQ       
-      QQQQQ               C QQ QQ'Q 1QQ>QQQQQQQQQQ  Q:QQ"QQ:QQ]QcQ     QQQQQQQ   XQx{QQQQQQXQQ      
-       tQQQQQ>QQ     Q.QQ'QQ+QQfQQQ  QQQQQQQQQQQQQ  QQxQQQQQQQQQQQ    .QQ>QQlQ      ;QiQ   J|c      
-        Q:QQ_Q.QQ;l   QYQQQQQQQQQQQ  QQQJQQf Q,Qv`t |Qc}QQ<           [^Q  QvQ      QQvQ            
-         QQQIQQnQQQQ  [QQQQQ>QQrQQQn  lQQrQ ^xQQtQQ QQQQQQ           QQQQ  QQQ     QQQQQ            
-          QQQQQQQQQQQ  QQQQQQQQ+      `QQiQ  ]Q(QQQ QQQQQ           QQQ   Q QQ     QQ:Q             
-           QQQQQQQtQQ|  ,QQ~QQ        QjQQQQ  QQQQ( QiQQ;          QQQ-   QQ Q     _QQ>             
-            Q'X  :Q.[Q   lQQQQl        'QQ'Q  QQ Q: QQJQQ' X^QQQ  QQQQzQQ}QQ:Q    QcQQ,             
-            _Q]QQ {QQQQQ  QQQQQ  QQQQ  QQQQQ  [Q/{" CQQrQQQQQ|Q   ]x Q ^ `QQ Q    Q,QQ              
-             QQ/Q  QQQ/QQ QQIQQ<cQQ(QQ QQnQQ  QQ_QQ  QQQQQQQQIQQ QxQQQ    QQ}Q   QQQQ,              
-              Q QQ  Q QQ '  Qv Q+,Q!|Q  Q:QQQ Qr QQ   QQQQQQQ<Q QQ`Qt     ' :    ^"c(`              
-               [QtI  >QQ.Q  QQ.QQiQQ    QQQ|Q cQQ>:  -  ]Q_<Q"  .Q1QQ     Q :n  ,Q;<Q               
-                !_ !  iQ 1  ~ ~Q .      `  Q  Q  Q       QQQ               Q<+  QQQCQ               
-                 Q QQ IQ QQ  z QQ        Q Q- Q< Q                                                  
-                  l)Q  QQ QQ  Q}iQ/      ' Qi Q                                                     
-                   Q^`     ">  t  Q  Q     Q  Q                                                     
-                    + Q }QQ QQ  Q  Q  Q                                                             
-                                '  '+ .                                                             
-                      Q  Q  Q     Q                                                                 
-                       Q +Y `_                                                                      
-                        .,  [                                                                       
-                         .Q  
-
+                               ^Q,                              Q;
+                              QQQQ                            QQQ
+                             QQQQQ:                          QQQQQ
+                             QQQQQQQ                         QQQQQQ
+                            QQQQQQQQQ                       QQQQQQQQ
+                            QQQQ QQQQQ   QQQQQQQ+QQQQQQ~QQ QQQQQQQQQ
+                           QQQQQQQvQQ<QQxQQQQQQQQQQQQQQ<QQQQQ~QQQQQ<Q
+                           QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ
                 free the world !
 """
 
@@ -72,50 +35,47 @@ LOGO = r"""
 def c(t, col): return f"\033[{col}m{t}\033[0m"
 def clear(): os.system("clear")
 
-def run(cmd, cwd=None):
-    env = os.environ.copy()
-    env["GIT_TERMINAL_PROMPT"] = "0"
-    subprocess.run(cmd, shell=True, cwd=cwd, env=env,
-                   stdout=subprocess.DEVNULL,
-                   stderr=subprocess.DEVNULL)
+def run_root(cmd):
+    subprocess.run(cmd, shell=True)
+
+def run_user(cmd, cwd=None):
+    user = os.environ.get("SUDO_USER")
+    if user:
+        subprocess.run(f"sudo -u {user} {cmd}", shell=True, cwd=cwd)
+    else:
+        subprocess.run(cmd, shell=True, cwd=cwd)
 
 def pause():
     input(c("\n[ENTER] pokračuj...", "90"))
 
-def require_sudo():
-    if os.geteuid() != 0:
-        print(c("Spusť Dedcat pomocí sudo!", "31"))
-        sys.exit(1)
+# ================= INFO =================
 
-# ================= SYSTEM INFO =================
-
-def ram_usage():
+def ram():
     try:
-        with open("/proc/meminfo") as f:
-            m = f.read()
-        total = int([x for x in m.splitlines() if "MemTotal" in x][0].split()[1])
-        free = int([x for x in m.splitlines() if "MemAvailable" in x][0].split()[1])
-        return f"{(total-free)//1024}MB / {total//1024}MB"
+        m = open("/proc/meminfo").read()
+        t = int([x for x in m.splitlines() if "MemTotal" in x][0].split()[1])
+        a = int([x for x in m.splitlines() if "MemAvailable" in x][0].split()[1])
+        return f"{(t-a)//1024}MB / {t//1024}MB"
     except:
         return "N/A"
 
 def os_name():
-    return platform.system() + " " + platform.release()
+    return f"{platform.system()} {platform.release()}"
 
 # ================= UI =================
 
-def show_logo():
+def show():
     clear()
     print(c(LOGO, "36"))
-    print(c(f"OS: {os_name()} | RAM: {ram_usage()}", "35"))
-    print(c(f"Aktivní repo: {CURRENT_REPO if CURRENT_REPO else 'žádné'} | Shell: {'ON' if SHELL_MODE else 'OFF'}\n", "33"))
+    print(c(f"OS: {os_name()} | RAM: {ram()}", "35"))
+    print(c(f"Aktivní repo: {CURRENT_REPO if CURRENT_REPO else 'žádné'}", "33"))
 
 def menu():
     print(c("""
 [1] Vypsat repozitáře
-[5] Vybrat aktivní repo
+[5] Vybrat repo
 [8] Shell mód
-[9] LAN přenos souborů
+[9] LAN přenos
 [0] Konec
 """, "36"))
 
@@ -123,14 +83,23 @@ def menu():
 
 def system_update():
     if os.path.exists("/data/data/com.termux"):
-        run("pkg update -y && pkg upgrade -y")
+        run_root("pkg update -y && pkg upgrade -y")
     else:
-        run("apt update && apt upgrade -y")
+        run_root("apt update && apt upgrade -y")
+
+# ================= DEDCAT UPDATE =================
+
+def dedcat_update():
+    if not os.path.isdir(".git"):
+        return
+    print(c("[DED CAT] checking updates...", "33"))
+    run_user("git fetch origin")
+    run_user("git reset --hard origin/main")
 
 # ================= REPOS =================
 
 def ensure_repo_dir():
-    os.makedirs(REPO_DIR, exist_ok=True)
+    run_user(f"mkdir -p {REPO_DIR}")
 
 def repo_name(url):
     return url.split("/")[-1].replace(".git", "")
@@ -141,16 +110,18 @@ def auto_clone_update():
         name = repo_name(url)
         path = f"{REPO_DIR}/{name}"
         if not os.path.isdir(path):
-            print(c(f"[CLONE] {name}", "33"))
-            run(f"git clone --depth 1 {url}", cwd=REPO_DIR)
+            print(c(f"[CLONE] {name}", "32"))
+            run_user(f"git clone --depth 1 {url}", cwd=REPO_DIR)
         else:
             print(c(f"[UPDATE] {name}", "34"))
-            run("git pull --ff-only", cwd=path)
+            run_user("git pull", cwd=path)
 
 def list_repos():
-    ensure_repo_dir()
+    if not os.path.isdir(REPO_DIR):
+        print("Žádné repozitáře")
+        return
     for r in os.listdir(REPO_DIR):
-        print(c(f"- {r}", "32"))
+        print("-", r)
 
 def select_repo():
     global CURRENT_REPO
@@ -161,37 +132,95 @@ def select_repo():
 
 # ================= SHELL =================
 
-def shell_mode():
+def shell():
     print(c("[SHELL MODE] napiš 'shelloff' pro návrat", "33"))
     while True:
-        cmd = input(c("(dedcat)$ ", "32"))
-        if cmd.strip() == "shelloff":
+        cmd = input("(dedcat)$ ")
+        if cmd == "shelloff":
             break
-        subprocess.call(cmd, shell=True)
+        run_user(cmd)
 
 # ================= LAN =================
 
+def progress(done, total):
+    p = int(done/total*100)
+    bar = "#"*(p//5)
+    print(f"\r[{bar:<20}] {p}%", end="")
+
+def lan_receive():
+    name = input("Session název: ")
+    passwd = input("Heslo: ")
+
+    s = socket.socket()
+    s.bind(("", LAN_PORT))
+    s.listen(1)
+    print("Čekám na připojení...")
+
+    c, _ = s.accept()
+    if c.recv(64).decode() != passwd:
+        c.close(); return
+
+    fname = c.recv(256).decode()
+    size = int(c.recv(64).decode())
+    got = 0
+
+    with open(fname, "wb") as f:
+        while got < size:
+            d = c.recv(BUF)
+            if not d: break
+            f.write(d)
+            got += len(d)
+            progress(got, size)
+
+    print("\nHotovo.")
+    c.close()
+
+def lan_send():
+    ip = input("IP cíle: ")
+    passwd = input("Heslo: ")
+    path = input("Soubor: ")
+
+    size = os.path.getsize(path)
+    s = socket.socket()
+    s.connect((ip, LAN_PORT))
+    s.send(passwd.encode())
+    s.send(os.path.basename(path).encode())
+    s.send(str(size).encode())
+
+    sent = 0
+    with open(path, "rb") as f:
+        while d := f.read(BUF):
+            s.send(d)
+            sent += len(d)
+            progress(sent, size)
+
+    print("\nOdesláno.")
+    s.close()
+
 def lan_menu():
     print("[1] Příjem\n[2] Odeslání")
-    input("> (zatím placeholder)")
+    c = input("> ")
+    if c == "1": lan_receive()
+    if c == "2": lan_send()
 
 # ================= MAIN =================
 
 def main():
-    require_sudo()
+    if os.geteuid() != 0:
+        print("Spusť přes sudo"); sys.exit(1)
 
-    # 🔥 AUTOMATICKY PŘI STARTU
     system_update()
+    dedcat_update()
     auto_clone_update()
 
     while True:
-        show_logo()
+        show()
         menu()
         ch = input("dedcat> ")
 
         if ch == "1": list_repos()
         elif ch == "5": select_repo()
-        elif ch == "8": shell_mode()
+        elif ch == "8": shell()
         elif ch == "9": lan_menu()
         elif ch == "0": break
 
