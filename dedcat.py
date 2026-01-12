@@ -1,23 +1,27 @@
 #!/usr/bin/env python3
-import os, sys, subprocess, socket, threading, time, platform
+import os
+import sys
+import subprocess
+import platform
+import socket
+import threading
+import time
 
-# ================== KONFIG ==================
+# ================= KONFIG =================
 
 REPO_DIR = "repos"
+INSTALL_FLAG = ".dedcat_installed"
 CURRENT_REPO = None
-
-DISCOVERY_PORT = 45454
-TRANSFER_PORT = 45455
-BUF = 4096
+SHELL_MODE = False
 
 AUTO_REPOS = [
     "https://github.com/htr-tech/zphisher.git",
-    "https://github.com/RetroXploit/DDoS-Ripper.git",
 ]
 
-DEDCAT_REPO = "https://github.com/DedcatOff/dedcat"
+LAN_PORT = 50505
+BUFFER = 4096
 
-# ================== LOGO ==================
+# ================= LOGO =================
 
 LOGO = r"""
             /\           /\
@@ -41,86 +45,103 @@ LOGO = r"""
                 free the world !
 """
 
-# ================== UTIL ==================
+# ================= UTIL =================
 
-def c(t, col): return f"\033[{col}m{t}\033[0m"
-def clear(): os.system("clear")
-def run(cmd, cwd=None): subprocess.run(cmd, shell=True, cwd=cwd)
+def c(t, col):
+    return f"\033[{col}m{t}\033[0m"
 
-# ================== HEADER ==================
+def clear():
+    os.system("clear")
 
-def get_ram():
+def run(cmd, cwd=None):
+    env = os.environ.copy()
+    env["GIT_TERMINAL_PROMPT"] = "0"
+    subprocess.run(cmd, shell=True, cwd=cwd, env=env)
+
+def pause():
+    input(c("\n[ENTER] pokračuj...", "90"))
+
+def require_sudo():
+    if os.geteuid() != 0:
+        print(c("Spusť Dedcat pomocí sudo!", "31"))
+        sys.exit(1)
+
+# ================= SYSTEM INFO =================
+
+def ram_usage():
     try:
-        mem = {}
         with open("/proc/meminfo") as f:
-            for l in f:
-                k,v = l.split(":")
-                mem[k] = int(v.strip().split()[0])
-        total = mem["MemTotal"]
-        avail = mem.get("MemAvailable", mem["MemFree"])
-        used = total - avail
-        return f"{used//1024}/{total//1024} MB ({int(used/total*100)}%)"
+            mem = f.read()
+        total = int([x for x in mem.splitlines() if "MemTotal" in x][0].split()[1])
+        free = int([x for x in mem.splitlines() if "MemAvailable" in x][0].split()[1])
+        used = total - free
+        return f"{used//1024}MB / {total//1024}MB"
     except:
         return "N/A"
 
-def get_os():
-    return f"{platform.system()} {platform.release()}"
+def os_name():
+    return platform.system() + " " + platform.release()
 
-def header():
-    w = os.get_terminal_size().columns
-    line = f" RAM: {get_ram()} │ OS: {get_os()} "
-    print(c(line.ljust(w, "─"), "90"))
+# ================= UI =================
 
-# ================== UPDATE ==================
-
-def system_update():
-    if "termux" in platform.platform().lower():
-        run("pkg update -y && pkg upgrade -y")
-    else:
-        run("apt update -y && apt upgrade -y")
-
-def self_update():
-    if os.path.isdir(".git"):
-        print(c("[DED CAT] self-update...", "33"))
-        run("git pull")
-
-# ================== UI ==================
-
-def show():
+def show_logo():
     clear()
-    header()
     print(c(LOGO, "36"))
-    print(c(f"Aktivní repo: {CURRENT_REPO if CURRENT_REPO else 'žádné'}\n", "35"))
+    print(c(f"OS: {os_name()} | RAM: {ram_usage()}", "35"))
+    print(c(f"Aktivní repo: {CURRENT_REPO if CURRENT_REPO else 'žádné'} | Shell: {'ON' if SHELL_MODE else 'OFF'}\n", "33"))
 
 def menu():
     print(c("""
 [1] Vypsat repozitáře
-[2] Přidat repo
-[5] Vybrat repo
+[2] Přidat repo RUČNĚ
+[3] Aktualizovat repo
+[4] Aktualizovat VŠECHNY
+[5] Vybrat aktivní repo
+[6] Smazat repo
+[7] System update
 [8] Shell mód
-[9] LAN file transfer
+[9] LAN přenos souborů
 [0] Konec
 """, "36"))
 
-# ================== REPOS ==================
+# ================= SYSTEM =================
 
-def ensure_repos():
+def system_update():
+    if os.path.exists("/data/data/com.termux"):
+        run("pkg update -y && pkg upgrade -y")
+    else:
+        run("apt update && apt upgrade -y")
+
+def self_update():
+    if os.path.isdir(".git"):
+        print(c("[DED CAT] checking updates...", "33"))
+        run("git fetch origin")
+        run("git reset --hard origin/main")
+
+# ================= REPOS =================
+
+def ensure_repo_dir():
     os.makedirs(REPO_DIR, exist_ok=True)
 
-def auto_clone():
-    ensure_repos()
-    for u in AUTO_REPOS:
-        n = u.split("/")[-1].replace(".git","")
-        p = f"{REPO_DIR}/{n}"
-        if not os.path.isdir(p):
-            run(f"git clone {u}", cwd=REPO_DIR)
+def repo_name(url):
+    return url.split("/")[-1].replace(".git", "")
+
+def auto_clone_update():
+    ensure_repo_dir()
+    for url in AUTO_REPOS:
+        name = repo_name(url)
+        path = f"{REPO_DIR}/{name}"
+        if not os.path.isdir(path):
+            print(c(f"[CLONE] {name}", "33"))
+            run(f"git clone {url}", cwd=REPO_DIR)
         else:
-            run("git pull", cwd=p)
+            print(c(f"[UPDATE] {name}", "34"))
+            run("git pull", cwd=path)
 
 def list_repos():
-    ensure_repos()
+    ensure_repo_dir()
     for r in os.listdir(REPO_DIR):
-        print("-", r)
+        print(c(f"- {r}", "32"))
 
 def select_repo():
     global CURRENT_REPO
@@ -129,149 +150,105 @@ def select_repo():
     if os.path.isdir(f"{REPO_DIR}/{r}"):
         CURRENT_REPO = r
 
-# ================== SHELL ==================
+# ================= SHELL =================
 
 def shell_mode():
-    rc = "/tmp/dedcatrc"
-    with open(rc,"w") as f:
-        f.write("shelloff(){ exit; }\n")
-    subprocess.run(
-        ["bash","--rcfile",rc,"-i"],
-        cwd=f"{REPO_DIR}/{CURRENT_REPO}" if CURRENT_REPO else None
-    )
-    os.remove(rc)
+    print(c("[SHELL MODE] napiš 'shelloff' pro návrat", "33"))
+    while True:
+        cmd = input(c("(dedcat)$ ", "32"))
+        if cmd.strip() == "shelloff":
+            break
+        subprocess.call(cmd, shell=True)
 
-# ================== PROGRESS ==================
+# ================= LAN TRANSFER =================
 
-def progress(done,total):
-    pct = int(done/total*100)
-    print(f"\r[{pct:3}%] {done//1024//1024}/{total//1024//1024} MB",
-          end="",flush=True)
+def progress(sent, total):
+    pct = int((sent/total)*100)
+    bar = "#"*(pct//5)
+    print(f"\r[{bar:<20}] {pct}%", end="")
 
-# ================== LAN ==================
+def lan_receive():
+    name = input("Session název: ")
+    password = input("Heslo: ")
 
-def lan_receiver():
-    name = input("Session name: ")
-    pwd = input("Password: ")
+    s = socket.socket()
+    s.bind(("", LAN_PORT))
+    s.listen(1)
+    print("Čekám na připojení...")
 
-    def beacon():
-        s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-        s.setsockopt(socket.SOL_SOCKET,socket.SO_BROADCAST,1)
-        while True:
-            s.sendto(f"DEDCAT:{name}".encode(),('<broadcast>',DISCOVERY_PORT))
-            time.sleep(2)
-
-    threading.Thread(target=beacon,daemon=True).start()
-
-    srv = socket.socket()
-    srv.bind(("",TRANSFER_PORT))
-    srv.listen(1)
-    print(c("[WAITING] příchozí přenos...", "32"))
-
-    conn,_ = srv.accept()
-    if conn.recv(1024).decode() != pwd:
-        conn.close(); return
+    conn, _ = s.accept()
+    if conn.recv(1024).decode() != password:
+        conn.close()
+        return
 
     fname = conn.recv(1024).decode()
     size = int(conn.recv(1024).decode())
-    rec = 0
+    received = 0
 
-    with open(fname,"wb") as f:
-        while rec < size:
-            d = conn.recv(BUF)
-            if not d: break
-            f.write(d)
-            rec += len(d)
-            progress(rec,size)
+    with open(fname, "wb") as f:
+        while received < size:
+            data = conn.recv(BUFFER)
+            if not data:
+                break
+            f.write(data)
+            received += len(data)
+            progress(received, size)
 
-    print("\n"+c("[RECEIVED]", "32"))
+    print("\nHotovo.")
     conn.close()
 
-def send_file(ip,pwd,path):
+def lan_send():
+    target = input("IP cíle: ")
+    password = input("Heslo: ")
+    path = input("Cesta k souboru: ")
+
     size = os.path.getsize(path)
     s = socket.socket()
-    s.connect((ip,TRANSFER_PORT))
-    s.send(pwd.encode()); time.sleep(0.2)
-    s.send(os.path.basename(path).encode()); time.sleep(0.2)
-    s.send(str(size).encode()); time.sleep(0.2)
+    s.connect((target, LAN_PORT))
+    s.send(password.encode())
+    s.send(os.path.basename(path).encode())
+    s.send(str(size).encode())
 
     sent = 0
-    with open(path,"rb") as f:
-        while d := f.read(BUF):
-            s.send(d)
-            sent += len(d)
-            progress(sent,size)
+    with open(path, "rb") as f:
+        while chunk := f.read(BUFFER):
+            s.send(chunk)
+            sent += len(chunk)
+            progress(sent, size)
 
-    print("\n"+c("[SENT]", "32"))
+    print("\nOdesláno.")
     s.close()
 
-def lan_sender():
-    sessions = {}
-    ip = None
-    pwd = None
+def lan_menu():
+    print("[1] Příchozí\n[2] Odchozí")
+    c = input("> ")
+    if c == "1":
+        lan_receive()
+    elif c == "2":
+        lan_send()
 
-    def discover():
-        s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-        s.bind(("",DISCOVERY_PORT))
-        while True:
-            d,a = s.recvfrom(1024)
-            if d.startswith(b"DEDCAT:"):
-                sessions[d.decode().split(":")[1]] = a[0]
-
-    threading.Thread(target=discover,daemon=True).start()
-
-    print(c("[LAN SEND MODE] čekám na session...", "33"))
-
-    while True:
-        print("\nSessions:")
-        for s in sessions: print(" -",s)
-
-        cmd = input("(lan)> ").strip()
-        if cmd=="exit": break
-
-        if cmd.startswith("connect "):
-            n = cmd.split(" ",1)[1]
-            if n in sessions:
-                ip = sessions[n]
-                print("[OK] connected")
-            else:
-                print("[ERR] nenalezeno")
-
-        elif cmd.startswith("pass "):
-            pwd = cmd.split(" ",1)[1]
-            print("[OK] password set")
-
-        elif cmd.startswith("upload "):
-            if not ip or not pwd:
-                print("[ERR] nejdřív connect + pass")
-            else:
-                send_file(ip,pwd,cmd.split(" ",1)[1])
-
-        else:
-            print("příkazy: connect | pass | upload | exit")
-
-def lan():
-    m = input("[1] příchozí | [2] odchozí: ")
-    if m=="1": lan_receiver()
-    else: lan_sender()
-
-# ================== MAIN ==================
+# ================= MAIN =================
 
 def main():
+    require_sudo()
     system_update()
     self_update()
-    auto_clone()
+    auto_clone_update()
+
+    global SHELL_MODE
 
     while True:
-        show()
+        show_logo()
         menu()
-        c = input("dedcat> ")
-        if c=="1": list_repos()
-        elif c=="2": auto_clone()
-        elif c=="5": select_repo()
-        elif c=="8": shell_mode()
-        elif c=="9": lan()
-        elif c=="0": break
+        ch = input("dedcat> ")
 
-if __name__=="__main__":
+        if ch == "1": list_repos()
+        elif ch == "5": select_repo()
+        elif ch == "8": shell_mode()
+        elif ch == "9": lan_menu()
+        elif ch == "0": break
+
+        pause()
+
+if __name__ == "__main__":
     main()
