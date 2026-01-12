@@ -12,6 +12,13 @@ CURRENT_REPO = None
 LAN_PORT = 50505
 BUF = 4096
 
+# ================= AUTO REPOS =================
+# ⬇⬇⬇ SEM SI BUDEŠ PŘIDÁVAT DALŠÍ REPOZITÁŘE ⬇⬇⬇
+
+AUTO_REPOS = [
+    "https://github.com/palahsu/DDoS-Ripper.git",
+]
+
 # ================= LOGO =================
 
 LOGO = r"""
@@ -47,10 +54,27 @@ def system_update():
         run("apt update && apt upgrade -y")
 
 def dedcat_update():
-    if not os.path.isdir(".git"):
-        return
-    print("[*] dedcat update")
-    run("git pull")
+    if os.path.isdir(".git"):
+        print("[*] dedcat update")
+        run("git pull")
+
+# ================= AUTO REPOS =================
+
+def repo_name(url):
+    return url.split("/")[-1].replace(".git", "")
+
+def auto_clone_update():
+    os.makedirs(REPO_DIR, exist_ok=True)
+    for url in AUTO_REPOS:
+        name = repo_name(url)
+        path = f"{REPO_DIR}/{name}"
+
+        if not os.path.isdir(path):
+            print(f"[CLONE] {name}")
+            run(f"git clone {url}", cwd=REPO_DIR)
+        else:
+            print(f"[UPDATE] {name}")
+            run("git pull", cwd=path)
 
 # ================= UI =================
 
@@ -73,11 +97,8 @@ def menu():
 
 # ================= REPOS =================
 
-def ensure_repo_dir():
-    os.makedirs(REPO_DIR, exist_ok=True)
-
 def list_repos():
-    ensure_repo_dir()
+    os.makedirs(REPO_DIR, exist_ok=True)
     r = os.listdir(REPO_DIR)
     if not r:
         print("Žádné repozitáře")
@@ -85,7 +106,7 @@ def list_repos():
         print("-", x)
 
 def add_repo():
-    ensure_repo_dir()
+    os.makedirs(REPO_DIR, exist_ok=True)
     url = input("Git URL: ")
     run(f"git clone {url}", cwd=REPO_DIR)
 
@@ -137,7 +158,8 @@ def lan_recv():
     with open(name, "wb") as f:
         while got < size:
             d = c.recv(BUF)
-            if not d: break
+            if not d:
+                break
             f.write(d)
             got += len(d)
 
@@ -147,8 +169,10 @@ def lan_recv():
 def lan_menu():
     print("[1] Odeslat\n[2] Přijmout")
     c = input("> ")
-    if c == "1": lan_send()
-    elif c == "2": lan_recv()
+    if c == "1":
+        lan_send()
+    elif c == "2":
+        lan_recv()
 
 # ================= MAIN =================
 
@@ -159,6 +183,7 @@ def main():
 
     system_update()
     dedcat_update()
+    auto_clone_update()
     pause()
 
     while True:
