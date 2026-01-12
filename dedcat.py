@@ -10,7 +10,7 @@ SHELL_MODE = False
 DED_CAT_REPO = "https://github.com/DedcatOff/dedcat.git"
 
 AUTO_REPOS = [
-    "https://github.com/RetroXploit/DDoS-Ripper.git",
+    "https://github.com/palahsu/DDoS-Ripper.git",
 ]
 
 LAN_PORT = 50505
