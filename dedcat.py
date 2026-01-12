@@ -5,7 +5,6 @@ import os, sys, subprocess, platform, socket, time
 
 REPO_DIR = "repos"
 CURRENT_REPO = None
-SHELL_MODE = False
 
 DED_CAT_REPO = "https://github.com/DedcatOff/dedcat.git"
 
@@ -27,7 +26,8 @@ LOGO = r"""
                             QQQQ QQQQQ   QQQQQQQ+QQQQQQ~QQ QQQQQQQQQ
                            QQQQQQQvQQ<QQxQQQQQQQQQQQQQQ<QQQQQ~QQQQQ<Q
                            QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ
-                free the world !
+
+                                free the world !
 """
 
 # ================= UTIL =================
@@ -68,7 +68,7 @@ def show():
     clear()
     print(c(LOGO, "36"))
     print(c(f"OS: {os_name()} | RAM: {ram()}", "35"))
-    print(c(f"Aktivní repo: {CURRENT_REPO if CURRENT_REPO else 'žádné'}", "33"))
+    print(c(f"Aktivní repo: {CURRENT_REPO if CURRENT_REPO else 'žádné'}\n", "33"))
 
 def menu():
     print(c("""
@@ -88,12 +88,28 @@ def system_update():
         run_root("apt update && apt upgrade -y")
 
 # ================= DEDCAT UPDATE =================
+# Bez dotazů, bez chyb, bezpečné
 
 def dedcat_update():
     if not os.path.isdir(".git"):
         return
+
     print(c("[DED CAT] checking updates...", "33"))
     run_user("git fetch origin")
+
+    # zjisti jestli je nová verze
+    res = subprocess.run(
+        "git rev-list HEAD...origin/main --count",
+        shell=True,
+        capture_output=True,
+        text=True
+    )
+
+    if res.stdout.strip() == "0":
+        print(c("[DED CAT] Already up to date.", "32"))
+        return
+
+    print(c("[DED CAT] Updating Dedcat...", "33"))
     run_user("git reset --hard origin/main")
 
 # ================= REPOS =================
@@ -136,44 +152,48 @@ def shell():
     print(c("[SHELL MODE] napiš 'shelloff' pro návrat", "33"))
     while True:
         cmd = input("(dedcat)$ ")
-        if cmd == "shelloff":
+        if cmd.strip() == "shelloff":
             break
         run_user(cmd)
 
 # ================= LAN =================
 
 def progress(done, total):
-    p = int(done/total*100)
-    bar = "#"*(p//5)
-    print(f"\r[{bar:<20}] {p}%", end="")
+    p = int(done / total * 100)
+    bar = "#" * (p // 5)
+    print(f"\r[{bar:<20}] {p}%", end="", flush=True)
 
 def lan_receive():
-    name = input("Session název: ")
+    print(c("LAN PŘÍJEM – čekám na připojení...", "33"))
     passwd = input("Heslo: ")
 
     s = socket.socket()
     s.bind(("", LAN_PORT))
     s.listen(1)
-    print("Čekám na připojení...")
 
-    c, _ = s.accept()
-    if c.recv(64).decode() != passwd:
-        c.close(); return
+    conn, addr = s.accept()
+    print(c(f"Připojení z {addr[0]}", "32"))
 
-    fname = c.recv(256).decode()
-    size = int(c.recv(64).decode())
+    if conn.recv(64).decode() != passwd:
+        print("Špatné heslo")
+        conn.close()
+        return
+
+    fname = conn.recv(256).decode()
+    size = int(conn.recv(64).decode())
+
     got = 0
-
     with open(fname, "wb") as f:
         while got < size:
-            d = c.recv(BUF)
-            if not d: break
+            d = conn.recv(BUF)
+            if not d:
+                break
             f.write(d)
             got += len(d)
             progress(got, size)
 
-    print("\nHotovo.")
-    c.close()
+    print("\nPŘIJATO:", fname)
+    conn.close()
 
 def lan_send():
     ip = input("IP cíle: ")
@@ -183,6 +203,7 @@ def lan_send():
     size = os.path.getsize(path)
     s = socket.socket()
     s.connect((ip, LAN_PORT))
+
     s.send(passwd.encode())
     s.send(os.path.basename(path).encode())
     s.send(str(size).encode())
@@ -194,20 +215,21 @@ def lan_send():
             sent += len(d)
             progress(sent, size)
 
-    print("\nOdesláno.")
+    print("\nODESLÁNO.")
     s.close()
 
 def lan_menu():
     print("[1] Příjem\n[2] Odeslání")
-    c = input("> ")
-    if c == "1": lan_receive()
-    if c == "2": lan_send()
+    ch = input("> ")
+    if ch == "1": lan_receive()
+    if ch == "2": lan_send()
 
 # ================= MAIN =================
 
 def main():
     if os.geteuid() != 0:
-        print("Spusť přes sudo"); sys.exit(1)
+        print("Spusť přes sudo")
+        sys.exit(1)
 
     system_update()
     dedcat_update()
