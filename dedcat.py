@@ -8,21 +8,23 @@ BROADCAST_PORT = 50506
 BUF = 4096
 CURRENT_REPO = None
 
-LOGO = """
- ▄▄▄▄▄▄▄▄▄▄   ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄   ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄ 
-▐░░░░░░░░░░▌ ▐░░░░░░░░░░░▌▐░░░░░░░░░░▌ ▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
-▐░█▀▀▀▀▀▀▀█░▌▐░█▀▀▀▀▀▀▀▀▀ ▐░█▀▀▀▀▀▀▀█░▌▐░█▀▀▀▀▀▀▀▀▀ ▐░█▀▀▀▀▀▀▀█░▌ ▀▀▀▀█░█▀▀▀▀ 
-▐░▌       ▐░▌▐░▌          ▐░▌       ▐░▌▐░▌          ▐░▌       ▐░▌     ▐░▌     
-▐░▌       ▐░▌▐░█▄▄▄▄▄▄▄▄▄ ▐░▌       ▐░▌▐░▌          ▐░█▄▄▄▄▄▄▄█░▌     ▐░▌     
-▐░▌       ▐░▌▐░░░░░░░░░░░▌▐░▌       ▐░▌▐░▌          ▐░░░░░░░░░░░▌     ▐░▌     
-▐░▌       ▐░▌▐░█▀▀▀▀▀▀▀▀▀ ▐░▌       ▐░▌▐░▌          ▐░█▀▀▀▀▀▀▀█░▌     ▐░▌     
-▐░▌       ▐░▌▐░▌          ▐░▌       ▐░▌▐░▌          ▐░▌       ▐░▌     ▐░▌     
-▐░█▄▄▄▄▄▄▄█░▌▐░█▄▄▄▄▄▄▄▄▄ ▐░█▄▄▄▄▄▄▄█░▌▐░█▄▄▄▄▄▄▄▄▄ ▐░▌       ▐░▌     ▐░▌     
-▐░░░░░░░░░░▌ ▐░░░░░░░░░░░▌▐░░░░░░░░░░▌ ▐░░░░░░░░░░░▌▐░▌       ▐░▌     ▐░▌     
- ▀▀▀▀▀▀▀▀▀▀   ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀   ▀▀▀▀▀▀▀▀▀▀▀  ▀         ▀       ▀ 
-"""
+AUTO_REPOS = [
+    # SEM PŘIDÁVEJ GITHUB REPOZITÁŘE
+    # "https://github.com/user/repo.git",
+    "https://github.com/palahsu/DDoS-Ripper.git",
+]
 
 DED_CAT_REPO = "https://github.com/DedcatOff/dedcat.git"
+
+LOGO = r"""
+                               ^Q,                              Q;
+                              QQQQ                            QQQ
+                             QQQQQ:                          QQQQQ
+                             QQQQQQQ                         QQQQQQ
+                            QQQQQQQQQ                       QQQQQQQQ
+                           QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ
+                                free the world !
+"""
 
 def run_root(cmd):
     subprocess.run(cmd, shell=True)
@@ -52,17 +54,22 @@ def dedcat_update():
 def ensure_repo_dir():
     os.makedirs(REPO_DIR, exist_ok=True)
 
+def repo_name(url):
+    return url.split("/")[-1].replace(".git", "")
+
+def auto_clone_repos():
+    ensure_repo_dir()
+    for url in AUTO_REPOS:
+        name = repo_name(url)
+        path = f"{REPO_DIR}/{name}"
+        if not os.path.isdir(path):
+            run_user(f"git clone --depth 1 {url}", cwd=REPO_DIR)
+        else:
+            run_user("git pull", cwd=path)
+
 def list_repos():
     ensure_repo_dir()
     return os.listdir(REPO_DIR)
-
-def clone_repo(url):
-    ensure_repo_dir()
-    run_user(f"git clone {url}", cwd=REPO_DIR)
-
-def update_repos():
-    for r in list_repos():
-        run_user("git pull", cwd=f"{REPO_DIR}/{r}")
 
 def make_key(p):
     return base64.urlsafe_b64encode(hashlib.sha256(p.encode()).digest())
@@ -72,34 +79,17 @@ def progress(scr, y, done, total):
     p = int(done / total * w)
     scr.addstr(y, 2, "[" + "#" * p + " " * (w - p) + "]")
 
-def discover():
-    found = set()
-    def listen():
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.bind(("", BROADCAST_PORT))
-        while True:
-            d, a = s.recvfrom(64)
-            if d == b"DEDCAT":
-                found.add(a[0])
-                s.sendto(b"OK", a)
-    threading.Thread(target=listen, daemon=True).start()
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-    s.sendto(b"DEDCAT", ("<broadcast>", BROADCAST_PORT))
-    time.sleep(2)
-    return list(found)
-
 def lan_recv(scr):
     curses.echo()
     scr.clear()
-    scr.addstr(1,2,"Heslo: ")
+    scr.addstr(2,2,"Heslo: ")
     p = scr.getstr().decode()
     curses.noecho()
     f = Fernet(make_key(p))
     s = socket.socket()
     s.bind(("", LAN_PORT))
     s.listen(1)
-    scr.addstr(3,2,"Čekám na připojení...")
+    scr.addstr(4,2,"Čekám na připojení...")
     scr.refresh()
     c,_ = s.accept()
     size = int(c.recv(32).decode())
@@ -108,17 +98,18 @@ def lan_recv(scr):
     while got < size:
         d=c.recv(BUF)
         data+=d; got+=len(d)
-        progress(scr,5,got,size); scr.refresh()
+        progress(scr,6,got,size); scr.refresh()
     open(name,"wb").write(f.decrypt(data))
     c.close()
-    scr.addstr(7,2,"Hotovo"); scr.getch()
+    scr.addstr(8,2,"Hotovo")
+    scr.getch()
 
 def lan_send(scr):
     curses.echo()
     scr.clear()
-    scr.addstr(1,2,"IP: "); ip=scr.getstr().decode()
-    scr.addstr(2,2,"Heslo: "); p=scr.getstr().decode()
-    scr.addstr(3,2,"Soubor: "); path=scr.getstr().decode()
+    scr.addstr(2,2,"IP: "); ip=scr.getstr().decode()
+    scr.addstr(3,2,"Heslo: "); p=scr.getstr().decode()
+    scr.addstr(4,2,"Soubor: "); path=scr.getstr().decode()
     curses.noecho()
     f=Fernet(make_key(p))
     raw=open(path,"rb").read()
@@ -131,9 +122,10 @@ def lan_send(scr):
     for i in range(0,len(enc),BUF):
         s.send(enc[i:i+BUF])
         sent+=BUF
-        progress(scr,5,min(sent,len(enc)),len(enc)); scr.refresh()
+        progress(scr,6,min(sent,len(enc)),len(enc)); scr.refresh()
     s.close()
-    scr.addstr(7,2,"Odesláno"); scr.getch()
+    scr.addstr(8,2,"Odesláno")
+    scr.getch()
 
 def shell_mode():
     rc="/tmp/dedcatrc"
@@ -146,15 +138,19 @@ def shell_mode():
 def draw_logo(scr):
     h,w=scr.getmaxyx()
     for i,l in enumerate(LOGO.splitlines()):
-        if i+1<h-6:
+        if i+1<h-10:
             scr.addstr(i+1,2,l[:w-4])
+
+def draw_graph(scr, y, label, percent):
+    bar = int(percent / 5)
+    scr.addstr(y,2,f"{label}: [{'#'*bar}{' '*(20-bar)}] {percent}%")
 
 def status_bar(scr):
     h,w=scr.getmaxyx()
     ram=psutil.virtual_memory()
     cpu=psutil.cpu_percent()
     osn=f"{platform.system()} {platform.release()}"
-    txt=f" OS:{osn} | RAM:{ram.used//1024//1024}/{ram.total//1024//1024}MB | CPU:{cpu}% "
+    txt=f" OS:{osn} | CPU:{cpu}% | RAM:{ram.used//1024//1024}/{ram.total//1024//1024}MB "
     scr.addstr(h-2,1,txt[:w-2],curses.A_REVERSE)
 
 def tui(scr):
@@ -163,16 +159,25 @@ def tui(scr):
     while True:
         scr.clear(); scr.border()
         draw_logo(scr)
+
+        cpu = int(psutil.cpu_percent())
+        ram = int(psutil.virtual_memory().percent)
+
+        draw_graph(scr,10,"CPU",cpu)
+        draw_graph(scr,11,"RAM",ram)
+
         status_bar(scr)
-        scr.addstr(12,2,"1 List repos")
-        scr.addstr(13,2,"2 Add repo")
-        scr.addstr(14,2,"3 Update repos")
-        scr.addstr(15,2,"4 Select repo")
-        scr.addstr(16,2,"5 Shell mode")
-        scr.addstr(17,2,"6 LAN")
-        scr.addstr(18,2,"0 Exit")
+
+        scr.addstr(13,2,"1 Repos")
+        scr.addstr(14,2,"2 Select repo")
+        scr.addstr(15,2,"3 Shell")
+        scr.addstr(16,2,"4 LAN")
+        scr.addstr(17,2,"0 Exit")
         scr.refresh()
+
+        scr.timeout(1000)
         k=scr.getch()
+
         if k==ord("1"):
             scr.clear()
             y=2
@@ -182,21 +187,13 @@ def tui(scr):
         elif k==ord("2"):
             curses.echo()
             scr.clear()
-            scr.addstr(2,2,"Repo URL: ")
-            clone_repo(scr.getstr().decode())
-            curses.noecho()
-        elif k==ord("3"):
-            update_repos()
-        elif k==ord("4"):
-            curses.echo()
-            scr.clear()
             scr.addstr(2,2,"Repo name: ")
             r=scr.getstr().decode()
             if r in list_repos(): CURRENT_REPO=r
             curses.noecho()
-        elif k==ord("5"):
+        elif k==ord("3"):
             shell_mode()
-        elif k==ord("6"):
+        elif k==ord("4"):
             scr.clear()
             scr.addstr(2,2,"1 Receive")
             scr.addstr(3,2,"2 Send")
@@ -209,11 +206,16 @@ def tui(scr):
 def main():
     if os.geteuid()!=0:
         print("Run with sudo"); sys.exit(1)
+
     system_update()
+    auto_clone_repos()
+
     u=dedcat_update_check()
     if u>0:
         print(f"DED CAT update {u}")
-        input("ENTER"); dedcat_update()
+        input("ENTER")
+        dedcat_update()
+
     input("ENTER")
     curses.wrapper(tui)
 
