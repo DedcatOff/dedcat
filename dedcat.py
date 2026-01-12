@@ -11,15 +11,11 @@ AUTO_REPOS = [
 ]
 
 LOGO = r"""
-                               ^Q,                              Q;
-                              QQQQ                            QQQ
-                             QQQQQ:                          QQQQQ
-                             QQQQQQQ                         QQQQQQ
-                            QQQQQQQQQ                       QQQQQQQQ
-                            QQQQ QQQQQ   QQQQQQQ+QQQQQQ~QQ QQQQQQQQQ
-                           QQQQQQQvQQ<QQxQQQQQQQQQQQQQQ<QQQQQ~QQQQQ<Q
-                           QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ
-                             free the world
+ _____     ______     _____     ______     ______     ______  
+/\  __-.  /\  ___\   /\  __-.  /\  ___\   /\  __ \   /\__  _\ 
+\ \ \/\ \ \ \  __\   \ \ \/\ \ \ \ \____  \ \  __ \  \/_/\ \/ 
+ \ \____-  \ \_____\  \ \____-  \ \_____\  \ \_\ \_\    \ \_\ 
+  \/____/   \/_____/   \/____/   \/_____/   \/_/\/_/     \/_/ 
 """
 
 def run_root(cmd):
