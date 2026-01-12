@@ -7,15 +7,48 @@ BROADCAST_PORT = 50506
 BUF = 4096
 
 LOGO = """
-                               ^Q,                              Q;
-                              QQQQ                            QQQ
-                             QQQQQ:                          QQQQQ
-                             QQQQQQQ                         QQQQQQ
-                            QQQQQQQQQ                       QQQQQQQQ
-                            QQQQ QQQQQ   QQQQQQQ+QQQQQQ~QQ QQQQQQQQQ
-                           QQQQQQQvQQ<QQxQQQQQQQQQQQQQQ<QQQQQ~QQQQQ<Q
-                           QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ
-                free the world !
+                              ^Q,                              Q;                                   
+                              QQQQ                            QQQ                                   
+                             QQQQQ:                          QQQQQ                                  
+                             QQQQQQQ                         QQQQQQ                                 
+                            QQQQQQQQQ                       QQQQQQQQ                                
+                            QQQQ QQQQQ   QQQQQQQ+QQQQQQ~QQ QQQQQQQQQ                                
+                           QQQQQQQvQQ<QQxQQQQQQQQQQQQQQ<QQQQQ~QQQQQ<Q                               
+                           QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ                              
+                           QQ QQQQ          Q^QQ ;Q QQ          QQQQQQ                              
+                          QQQQQQ              .QQ:QQ/       !Q]   QQQYQ                             
+                         xQQQQQ      Y>QQQQ    `QQQQ QQQQ  QQQ.    QQ<QQ                            
+                         QQQQi      QQQQQQQQ)   Q+Q    -QQ'QQ      QQQQQ                            
+                           Q       Q  Q _Q Q,Q   Q'      /1 Q        QQ Q                           
+                         QQQQQ     QQ QQQQ QQx  |QQv   QQQ QQQQQ   QQQQQQ                           
+                        QQQQQQQ    QQ QQ QQQQ   QQQQ} QQQ     QQ  ^Q QQ;QQ                          
+                        QQl_Ql"x      QQzQQJ   QQQQCQQ          +  QfJQ1QQ                          
+                         QQ.QQ[QQ            QQ,Q Q_ Qt Q-  [ QQQQQQQQQQQQ                          
+                        QQQQQQQQQQQQ      QQ QQ QQ}QQQQQQQQ(    QQQ QQ <                            
+                          QQzQXQQCJ  |Q c     QQQ  QQ      QQ'QQ   t      <Q                        
+                              ;QQiQ|   .QcQQQQX  Q   QQQQQQQQQQQQQ       QQQQ   QQ                  
+                                    QQ^QQ QQlQQ.Q   :QQQQQzQQQQQ:Q{     Q+QQ{   QQQ,^"QQQQQQQ       
+      QQQQQ               C QQ QQ'Q 1QQ>QQQQQQQQQQ  Q:QQ"QQ:QQ]QcQ     QQQQQQQ   XQx{QQQQQQXQQ      
+       tQQQQQ>QQ     Q.QQ'QQ+QQfQQQ  QQQQQQQQQQQQQ  QQxQQQQQQQQQQQ    .QQ>QQlQ      ;QiQ   J|c      
+        Q:QQ_Q.QQ;l   QYQQQQQQQQQQQ  QQQJQQf Q,Qv`t |Qc}QQ<           [^Q  QvQ      QQvQ            
+         QQQIQQnQQQQ  [QQQQQ>QQrQQQn  lQQrQ ^xQQtQQ QQQQQQ           QQQQ  QQQ     QQQQQ            
+          QQQQQQQQQQQ  QQQQQQQQ+      `QQiQ  ]Q(QQQ QQQQQ           QQQ   Q QQ     QQ:Q             
+           QQQQQQQtQQ|  ,QQ~QQ        QjQQQQ  QQQQ( QiQQ;          QQQ-   QQ Q     _QQ>             
+            Q'X  :Q.[Q   lQQQQl        'QQ'Q  QQ Q: QQJQQ' X^QQQ  QQQQzQQ}QQ:Q    QcQQ,             
+            _Q]QQ {QQQQQ  QQQQQ  QQQQ  QQQQQ  [Q/{" CQQrQQQQQ|Q   ]x Q ^ `QQ Q    Q,QQ              
+             QQ/Q  QQQ/QQ QQIQQ<cQQ(QQ QQnQQ  QQ_QQ  QQQQQQQQIQQ QxQQQ    QQ}Q   QQQQ,              
+              Q QQ  Q QQ '  Qv Q+,Q!|Q  Q:QQQ Qr QQ   QQQQQQQ<Q QQ`Qt     ' :    ^"c(`              
+               [QtI  >QQ.Q  QQ.QQiQQ    QQQ|Q cQQ>:  -  ]Q_<Q"  .Q1QQ     Q :n  ,Q;<Q               
+                !_ !  iQ 1  ~ ~Q .      `  Q  Q  Q       QQQ               Q<+  QQQCQ               
+                 Q QQ IQ QQ  z QQ        Q Q- Q< Q                                                  
+                  l)Q  QQ QQ  Q}iQ/      ' Qi Q                                                     
+                   Q^`     ">  t  Q  Q     Q  Q                                                     
+                    + Q }QQ QQ  Q  Q  Q                                                             
+                                '  '+ .                                                             
+                      Q  Q  Q     Q                                                                 
+                       Q +Y `_                                                                      
+                        .,  [                                                                       
+                         .Q  
 """
 
 def run_root(cmd):
