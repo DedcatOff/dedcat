@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import os
 import sys
 import subprocess
@@ -7,7 +6,6 @@ import threading
 import time
 import platform
 
-# ================== KONFIG ==================
 
 REPO_DIR = "repos"
 CURRENT_REPO = None
@@ -23,7 +21,6 @@ AUTO_REPOS = [
 
 DEDCAT_GIT = "https://github.com/DedcatOff/dedcat"
 
-# ================== LOGO ==================
 
 LOGO = r"""
             /\           /\
@@ -47,13 +44,11 @@ LOGO = r"""
                 free the world !
 """
 
-# ================== UTIL ==================
 
 def c(t, col): return f"\033[{col}m{t}\033[0m"
 def clear(): os.system("clear")
 def run(cmd, cwd=None): subprocess.run(cmd, shell=True, cwd=cwd)
 
-# ================== UPDATE ==================
 
 def system_update():
     if "termux" in platform.platform().lower():
@@ -68,7 +63,6 @@ def dedcat_self_update():
     else:
         print(c("[DED CAT] not installed via git", "90"))
 
-# ================== UI ==================
 
 def show():
     clear()
@@ -84,8 +78,6 @@ def menu():
 [9] LAN file transfer
 [0] Konec
 """, "36"))
-
-# ================== REPOS ==================
 
 def ensure_repos():
     os.makedirs(REPO_DIR, exist_ok=True)
@@ -112,7 +104,6 @@ def select_repo():
     if os.path.isdir(f"{REPO_DIR}/{r}"):
         CURRENT_REPO = r
 
-# ================== SHELL ==================
 
 def shell_mode():
     rc = "/tmp/dedcatrc"
@@ -124,7 +115,6 @@ def shell_mode():
     )
     os.remove(rc)
 
-# ================== PROGRESS ==================
 
 def progress(done, total):
     percent = int(done / total * 100)
@@ -132,7 +122,6 @@ def progress(done, total):
     mb_t = total / 1024 / 1024
     print(f"\r[{percent:3}%] {mb_d:.2f}/{mb_t:.2f} MB", end="", flush=True)
 
-# ================== LAN ==================
 
 def receiver():
     name = input("Session name: ")
@@ -222,7 +211,6 @@ def lan():
     m = input("[1] přijímat | [2] posílat: ")
     receiver() if m == "1" else sender()
 
-# ================== MAIN ==================
 
 def main():
     system_update()
