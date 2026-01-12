@@ -8,6 +8,8 @@ import hashlib
 from Crypto.Cipher import AES
 from Crypto.Random import get_random_bytes
 
+# ===== GLOBÁLNÍ STAV (MUSÍ BÝT NAHOŘE) =====
+
 REPO_DIR = "repos"
 CURRENT_REPO = None
 
@@ -20,6 +22,8 @@ AUTO_REPOS = [
 LAN_PORT = 50505
 BUF = 4096
 
+# ===== LOGO =====
+
 LOGO = r"""
  ________  _______   ________  ________  ________  _________
 |\   ___ \|\  ___ \ |\   ___ \|\   ____\|\   __  \|\___   ___\
@@ -31,17 +35,19 @@ LOGO = r"""
                         free the world !
 """
 
-def blue(t): 
+# ===== UTIL =====
+
+def blue(t):
     return f"\033[94m{t}\033[0m"
 
-def clear(): 
+def clear():
     os.system("clear")
-
-def is_termux():
-    return os.path.exists("/data/data/com.termux")
 
 def pause():
     input("\nENTER")
+
+def is_termux():
+    return os.path.exists("/data/data/com.termux")
 
 def run(cmd, cwd=None):
     subprocess.run(cmd, shell=True, cwd=cwd)
@@ -52,6 +58,8 @@ def run_user(cmd, cwd=None):
         subprocess.run(f"sudo -u {user} {cmd}", shell=True, cwd=cwd)
     else:
         subprocess.run(cmd, shell=True, cwd=cwd)
+
+# ===== UI =====
 
 def show():
     clear()
@@ -69,6 +77,8 @@ def menu():
 [0] Konec
 """)
 
+# ===== SYSTEM =====
+
 def system_update():
     print("[SYSTEM] update & upgrade")
     if is_termux():
@@ -82,6 +92,8 @@ def dedcat_update():
     print("[DED CAT] checking updates...")
     run_user("git fetch origin")
     run_user("git reset --hard origin/main")
+
+# ===== REPOS =====
 
 def ensure_repo_dir():
     run_user(f"mkdir -p {REPO_DIR}")
@@ -115,47 +127,50 @@ def select_repo():
     if os.path.isdir(f"{REPO_DIR}/{r}"):
         CURRENT_REPO = r
 
+# ===== SHELL =====
+
 def shell_mode():
     print("\n[SHELL MODE] napiš 'exit' pro návrat\n")
-    cwd = f"{REPO_DIR}/{CURRENT_REPO}" if CURRENT_REPO else None
-    if cwd:
-        os.chdir(cwd)
+    if CURRENT_REPO:
+        os.chdir(f"{REPO_DIR}/{CURRENT_REPO}")
     os.execvp("bash", ["bash"])
 
-def pad(data):
-    l = 16 - len(data) % 16
-    return data + bytes([l]) * l
+# ===== LAN (AES) =====
 
-def unpad(data):
-    return data[:-data[-1]]
+def pad(d):
+    p = 16 - len(d) % 16
+    return d + bytes([p]) * p
 
-def key_from_pass(p):
-    return hashlib.sha256(p.encode()).digest()
+def unpad(d):
+    return d[:-d[-1]]
+
+def key(passwd):
+    return hashlib.sha256(passwd.encode()).digest()
 
 def lan_receive():
     passwd = input("Heslo: ")
-    key = key_from_pass(passwd)
+    k = key(passwd)
 
     s = socket.socket()
     s.bind(("", LAN_PORT))
     s.listen(1)
-    print("Čekám na připojení...")
+    print("Čekám...")
 
     c, _ = s.accept()
     iv = c.recv(16)
-    cipher = AES.new(key, AES.MODE_CBC, iv)
+    cipher = AES.new(k, AES.MODE_CBC, iv)
 
     fname = c.recv(256).decode().strip()
     size = int(c.recv(64).decode().strip())
-    data = b""
 
+    data = b""
     while len(data) < size:
         data += c.recv(BUF)
 
     with open(fname, "wb") as f:
         f.write(unpad(cipher.decrypt(data)))
 
-    print("Hotovo.")
+    print("Hotovo")
     c.close()
 
 def lan_send():
@@ -163,12 +178,12 @@ def lan_send():
     passwd = input("Heslo: ")
     path = input("Soubor: ")
 
-    key = key_from_pass(passwd)
+    k = key(passwd)
     iv = get_random_bytes(16)
-    cipher = AES.new(key, AES.MODE_CBC, iv)
+    cipher = AES.new(k, AES.MODE_CBC, iv)
 
-    data = open(path, "rb").read()
-    enc = cipher.encrypt(pad(data))
+    data = pad(open(path, "rb").read())
+    enc = cipher.encrypt(data)
 
     s = socket.socket()
     s.connect((ip, LAN_PORT))
@@ -177,7 +192,7 @@ def lan_send():
     s.send(str(len(enc)).encode().ljust(64))
     s.send(enc)
     s.close()
-    print("Odesláno.")
+    print("Odesláno")
 
 def lan_menu():
     print("[1] Příjem\n[2] Odeslání")
@@ -187,9 +202,11 @@ def lan_menu():
     elif c == "2":
         lan_send()
 
+# ===== MAIN =====
+
 def main():
     if not is_termux() and os.geteuid() != 0:
-        print("Spusť přes sudo (Linux) / v Termuxu bez sudo")
+        print("Spusť přes sudo (Linux) / bez sudo (Termux)")
         sys.exit(1)
 
     system_update()
