@@ -4,47 +4,32 @@ import sys
 import subprocess
 import platform
 import socket
-import hashlib
-from Crypto.Cipher import AES
-from Crypto.Random import get_random_bytes
 
-# ===== GLOBÁLNÍ STAV (MUSÍ BÝT NAHOŘE) =====
+# ================= GLOBAL =================
 
 REPO_DIR = "repos"
 CURRENT_REPO = None
-
-DED_CAT_REPO = "https://github.com/DedcatOff/dedcat.git"
-
-AUTO_REPOS = [
-    "https://github.com/palahsu/DDoS-Ripper.git",
-]
-
 LAN_PORT = 50505
 BUF = 4096
 
-# ===== LOGO =====
+# ================= LOGO =================
 
 LOGO = r"""
- ________  _______   ________  ________  ________  _________
-|\   ___ \|\  ___ \ |\   ___ \|\   ____\|\   __  \|\___   ___\
-\ \  \_|\ \ \   __/|\ \  \_|\ \ \  \___|\ \  \|\  \|___ \  \_|
- \ \  \ \\ \ \  \_|/_\ \  \ \\ \ \  \    \ \   __  \   \ \  \
-  \ \  \_\\ \ \  \_|\ \ \  \_\\ \ \  \____\ \  \ \  \   \ \  \
+ ________  _______   ________  ________  ________  _________   
+|\   ___ \|\  ___ \ |\   ___ \|\   ____\|\   __  \|\___   ___\ 
+\ \  \_|\ \ \   __/|\ \  \_|\ \ \  \___|\ \  \|\  \|___ \  \_| 
+ \ \  \ \\ \ \  \_|/_\ \  \ \\ \ \  \    \ \   __  \   \ \  \  
+  \ \  \_\\ \ \  \_|\ \ \  \_\\ \ \  \____\ \  \ \  \   \ \  \ 
    \ \_______\ \_______\ \_______\ \_______\ \__\ \__\   \ \__\
     \|_______|\|_______|\|_______|\|_______|\|__|\|__|    \|__|
                         free the world !
 """
 
-# ===== UTIL =====
+# ================= UTIL =================
 
-def blue(t):
-    return f"\033[94m{t}\033[0m"
-
-def clear():
-    os.system("clear")
-
-def pause():
-    input("\nENTER")
+def blue(t): return f"\033[94m{t}\033[0m"
+def clear(): os.system("clear")
+def pause(): input("\n[ENTER] pokračuj...")
 
 def is_termux():
     return os.path.exists("/data/data/com.termux")
@@ -52,14 +37,22 @@ def is_termux():
 def run(cmd, cwd=None):
     subprocess.run(cmd, shell=True, cwd=cwd)
 
-def run_user(cmd, cwd=None):
-    user = os.environ.get("SUDO_USER")
-    if user:
-        subprocess.run(f"sudo -u {user} {cmd}", shell=True, cwd=cwd)
-    else:
-        subprocess.run(cmd, shell=True, cwd=cwd)
+# ================= SYSTEM =================
 
-# ===== UI =====
+def system_update():
+    print("[*] system update")
+    if is_termux():
+        run("pkg update -y && pkg upgrade -y")
+    else:
+        run("apt update && apt upgrade -y")
+
+def dedcat_update():
+    if not os.path.isdir(".git"):
+        return
+    print("[*] dedcat update")
+    run("git pull")
+
+# ================= UI =================
 
 def show():
     clear()
@@ -71,54 +64,30 @@ def show():
 def menu():
     print("""
 [1] Vypsat repozitáře
-[2] Vybrat repo
-[3] Shell mód
-[4] LAN přenos
+[2] Přidat repo (git clone)
+[3] Vybrat repo
+[4] Shell mód
+[5] LAN přenos
 [0] Konec
 """)
 
-# ===== SYSTEM =====
-
-def system_update():
-    print("[SYSTEM] update & upgrade")
-    if is_termux():
-        run("pkg update -y && pkg upgrade -y")
-    else:
-        run("apt update && apt upgrade -y")
-
-def dedcat_update():
-    if not os.path.isdir(".git"):
-        return
-    print("[DED CAT] checking updates...")
-    run_user("git fetch origin")
-    run_user("git reset --hard origin/main")
-
-# ===== REPOS =====
+# ================= REPOS =================
 
 def ensure_repo_dir():
-    run_user(f"mkdir -p {REPO_DIR}")
-
-def repo_name(url):
-    return url.split("/")[-1].replace(".git", "")
-
-def auto_clone():
-    ensure_repo_dir()
-    for url in AUTO_REPOS:
-        name = repo_name(url)
-        path = f"{REPO_DIR}/{name}"
-        if not os.path.isdir(path):
-            print(f"[CLONE] {name}")
-            run_user(f"git clone --depth 1 {url}", cwd=REPO_DIR)
-        else:
-            print(f"[UPDATE] {name}")
-            run_user("git pull", cwd=path)
+    os.makedirs(REPO_DIR, exist_ok=True)
 
 def list_repos():
-    if not os.path.isdir(REPO_DIR):
-        print("žádné")
-        return
-    for r in os.listdir(REPO_DIR):
-        print("-", r)
+    ensure_repo_dir()
+    r = os.listdir(REPO_DIR)
+    if not r:
+        print("Žádné repozitáře")
+    for x in r:
+        print("-", x)
+
+def add_repo():
+    ensure_repo_dir()
+    url = input("Git URL: ")
+    run(f"git clone {url}", cwd=REPO_DIR)
 
 def select_repo():
     global CURRENT_REPO
@@ -127,108 +96,82 @@ def select_repo():
     if os.path.isdir(f"{REPO_DIR}/{r}"):
         CURRENT_REPO = r
 
-# ===== SHELL =====
+# ================= SHELL MODE =================
 
 def shell_mode():
-    print("\n[SHELL MODE] napiš 'exit' pro návrat\n")
+    print("[SHELL MODE] napiš exit pro návrat")
     if CURRENT_REPO:
-        os.chdir(f"{REPO_DIR}/{CURRENT_REPO}")
-    os.execvp("bash", ["bash"])
+        run("bash", cwd=f"{REPO_DIR}/{CURRENT_REPO}")
+    else:
+        run("bash")
 
-# ===== LAN (AES) =====
-
-def pad(d):
-    p = 16 - len(d) % 16
-    return d + bytes([p]) * p
-
-def unpad(d):
-    return d[:-d[-1]]
-
-def key(passwd):
-    return hashlib.sha256(passwd.encode()).digest()
-
-def lan_receive():
-    passwd = input("Heslo: ")
-    k = key(passwd)
-
-    s = socket.socket()
-    s.bind(("", LAN_PORT))
-    s.listen(1)
-    print("Čekám...")
-
-    c, _ = s.accept()
-    iv = c.recv(16)
-    cipher = AES.new(k, AES.MODE_CBC, iv)
-
-    fname = c.recv(256).decode().strip()
-    size = int(c.recv(64).decode().strip())
-
-    data = b""
-    while len(data) < size:
-        data += c.recv(BUF)
-
-    with open(fname, "wb") as f:
-        f.write(unpad(cipher.decrypt(data)))
-
-    print("Hotovo")
-    c.close()
+# ================= LAN =================
 
 def lan_send():
     ip = input("IP: ")
-    passwd = input("Heslo: ")
     path = input("Soubor: ")
-
-    k = key(passwd)
-    iv = get_random_bytes(16)
-    cipher = AES.new(k, AES.MODE_CBC, iv)
-
-    data = pad(open(path, "rb").read())
-    enc = cipher.encrypt(data)
+    size = os.path.getsize(path)
 
     s = socket.socket()
     s.connect((ip, LAN_PORT))
-    s.send(iv)
-    s.send(os.path.basename(path).encode().ljust(256))
-    s.send(str(len(enc)).encode().ljust(64))
-    s.send(enc)
+    s.send(os.path.basename(path).encode()+b"\n")
+    s.send(str(size).encode()+b"\n")
+
+    with open(path, "rb") as f:
+        while d := f.read(BUF):
+            s.send(d)
     s.close()
     print("Odesláno")
 
-def lan_menu():
-    print("[1] Příjem\n[2] Odeslání")
-    c = input("> ")
-    if c == "1":
-        lan_receive()
-    elif c == "2":
-        lan_send()
+def lan_recv():
+    s = socket.socket()
+    s.bind(("", LAN_PORT))
+    s.listen(1)
+    print("Čekám na připojení...")
+    c, _ = s.accept()
 
-# ===== MAIN =====
+    name = c.recv(256).decode().strip()
+    size = int(c.recv(64).decode().strip())
+    got = 0
+
+    with open(name, "wb") as f:
+        while got < size:
+            d = c.recv(BUF)
+            if not d: break
+            f.write(d)
+            got += len(d)
+
+    c.close()
+    print("Přijato")
+
+def lan_menu():
+    print("[1] Odeslat\n[2] Přijmout")
+    c = input("> ")
+    if c == "1": lan_send()
+    elif c == "2": lan_recv()
+
+# ================= MAIN =================
 
 def main():
     if not is_termux() and os.geteuid() != 0:
-        print("Spusť přes sudo (Linux) / bez sudo (Termux)")
+        print("Na Linuxu spusť přes sudo")
         sys.exit(1)
 
     system_update()
     dedcat_update()
-    auto_clone()
     pause()
 
     while True:
         show()
         menu()
-        c = input("> ")
+        c = input("dedcat> ")
 
-        if c == "1":
-            list_repos()
-        elif c == "2":
-            select_repo()
-        elif c == "3":
-            shell_mode()
-        elif c == "4":
-            lan_menu()
-        elif c == "0":
-            break
+        if c == "1": list_repos()
+        elif c == "2": add_repo()
+        elif c == "3": select_repo()
+        elif c == "4": shell_mode()
+        elif c == "5": lan_menu()
+        elif c == "0": break
 
         pause()
 
