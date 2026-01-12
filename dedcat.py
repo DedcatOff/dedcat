@@ -13,17 +13,10 @@ AUTO_REPOS = [
 ]
 
 LOGO = r"""
-                               ^Q,                              Q;
-                              QQQQ                            QQQ
-                             QQQQQ:                          QQQQQ
-                             QQQQQQQ                         QQQQQQ
-                            QQQQQQQQQ                       QQQQQQQQ
-                            QQQQ QQQQQ   QQQQQQQ+QQQQQQ~QQ QQQQQQQQQ
-                           QQQQQQQvQQ<QQxQQQQQQQQQQQQQQ<QQQQQ~QQQQQ<Q
-                           QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ
-
-                                   D E D C A T
-                                free the world !
+████▄  ██████ ████▄  ▄█████ ▄████▄ ██████ 
+██  ██ ██▄▄   ██  ██ ██     ██▄▄██   ██   
+████▀  ██▄▄▄▄ ████▀  ▀█████ ██  ██   ██ 
+           free the world !
 """
 
 def blue(t):
