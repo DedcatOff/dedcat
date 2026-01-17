@@ -5,20 +5,19 @@ import os, sys, socket, time, threading, subprocess, platform
 
 REPO_DIR = "repos"
 AUTO_REPOS = [
-    https://github.com/screetsec/TheFatRat.git,
-https://github.com/palahsu/DDoS-Ripper.git,
-https://github.com/arqi-io/zphisher.git,
-https://github.com/rapid7/metasploit-framework.git,
-https://github.com/flashnuke/wifi-deauth.git,
-https://github.com/ZeltNamizake/DriFiCrack.git,
-https://github.com/webdragon63/Bluedos.git,
-https://github.com/derv82/wifite,
-https://github.com/derv82/wifite2,
-https://github.com/muneebwanee/InstaReporter,
-https://github.com/mfr-fr/sms-sender,
-https://github.com/Tuhinshubhra/RED_HAWK.git,
-https://github.com/secdev/scapy.git
-
+    "https://github.com/screetsec/TheFatRat.git",
+    "https://github.com/palahsu/DDoS-Ripper.git",
+    "https://github.com/arqi-io/zphisher.git",
+    "https://github.com/rapid7/metasploit-framework.git",
+    "https://github.com/flashnuke/wifi-deauth.git",
+    "https://github.com/ZeltNamizake/DriFiCrack.git",
+    "https://github.com/webdragon63/Bluedos.git",
+    "https://github.com/derv82/wifite.git",
+    "https://github.com/derv82/wifite2.git",
+    "https://github.com/muneebwanee/InstaReporter.git",
+    "https://github.com/mfr-fr/sms-sender.git",
+    "https://github.com/Tuhinshubhra/RED_HAWK.git",
+    "https://github.com/secdev/scapy.git"
 ]
 
 LAN_BROADCAST_PORT = 40404
